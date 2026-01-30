@@ -1,11 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.database import SessionLocal
-from app.models import Tool
-from app.models import Maintenance
-from app.models import Rental
+from app.models import Tool, Maintenance, Rental
 
-router = APIRouter(prefix="/tools", tags=["Инструменты"])
+router = APIRouter(
+    prefix="/tools",
+    tags=["Инструменты"]
+)
+
 
 def get_db():
     db = SessionLocal()
@@ -14,9 +16,11 @@ def get_db():
     finally:
         db.close()
 
+
 @router.get("/")
 def get_tools(db: Session = Depends(get_db)):
     return db.query(Tool).all()
+
 
 @router.get("/{tool_id}")
 def get_tool(tool_id: int, db: Session = Depends(get_db)):
@@ -24,6 +28,7 @@ def get_tool(tool_id: int, db: Session = Depends(get_db)):
     if not tool:
         raise HTTPException(status_code=404, detail="Инструмент не найден")
     return tool
+
 
 @router.post("/")
 def add_tool(
@@ -42,6 +47,7 @@ def add_tool(
     db.commit()
     db.refresh(tool)
     return tool
+
 
 @router.put("/{tool_id}")
 def update_tool(
@@ -65,15 +71,17 @@ def update_tool(
     db.refresh(tool)
     return tool
 
-@router.delete("/{tool_id}")
-def delete_tool(tool_id: int, db: Session = Depends(get_db)):
+
+@router.patch("/{tool_id}/archive")
+def archive_tool(tool_id: int, db: Session = Depends(get_db)):
     tool = db.query(Tool).filter(Tool.id == tool_id).first()
     if not tool:
         raise HTTPException(status_code=404, detail="Инструмент не найден")
 
-    db.delete(tool)
+    tool.status = "Архив"
     db.commit()
-    return {"message": "Инструмент удалён"}
+    return {"message": "Инструмент архивирован"}
+
 
 @router.get("/{tool_id}/rentals")
 def tool_rentals(tool_id: int, db: Session = Depends(get_db)):
@@ -87,6 +95,8 @@ def tool_rentals(tool_id: int, db: Session = Depends(get_db)):
         "rentals": rentals
     }
 
+
+
 @router.get("/{tool_id}/maintenance")
 def tool_maintenance(tool_id: int, db: Session = Depends(get_db)):
     tool = db.query(Tool).filter(Tool.id == tool_id).first()
@@ -98,3 +108,20 @@ def tool_maintenance(tool_id: int, db: Session = Depends(get_db)):
         "tool_id": tool_id,
         "maintenance": records
     }
+
+@router.delete("/{tool_id}")
+def delete_tool(tool_id: int, db: Session = Depends(get_db)):
+    tool = db.query(Tool).filter(Tool.id == tool_id).first()
+    if not tool:
+        raise HTTPException(status_code=404, detail="Инструмент не найден")
+
+    rentals_count = db.query(Rental).filter(Rental.tool_id == tool_id).count()
+    if rentals_count > 0:
+        raise HTTPException(
+            status_code=400,
+            detail="Нельзя удалить инструмент: есть связанные аренды"
+        )
+
+    db.delete(tool)
+    db.commit()
+    return {"message": "Инструмент удалён"}

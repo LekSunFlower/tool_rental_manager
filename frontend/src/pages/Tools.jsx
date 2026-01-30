@@ -10,11 +10,40 @@ function Tools() {
   const [selected, setSelected] = useState(null)
   const [search, setSearch] = useState("")
 
+  const reloadTools = async () => {
+    const res = await fetch("http://127.0.0.1:8000/tools")
+    setTools(await res.json())
+  }
+
   useEffect(() => {
-    fetch("http://127.0.0.1:8000/tools")
-      .then(res => res.json())
-      .then(data => setTools(data))
+    reloadTools()
   }, [])
+
+  const handleDeleteTool = async () => {
+    if (!selected) return
+    if (!window.confirm("Удалить инструмент?")) return
+
+    await fetch(`http://127.0.0.1:8000/tools/${selected.id}`, {
+      method: "DELETE"
+    })
+
+    setSelected(null)
+    reloadTools()
+  }
+
+  const handleAddTool = async () => {
+    const name = prompt("Название инструмента")
+    const category = prompt("Категория")
+    const price = prompt("Цена за день")
+    if (!name || !price) return
+
+    await fetch(
+      `http://127.0.0.1:8000/tools?name=${name}&category=${category}&price_per_day=${price}`,
+      { method: "POST" }
+    )
+
+    reloadTools()
+  }
 
   const filtered = tools.filter(t =>
     t.name.toLowerCase().includes(search.toLowerCase())
@@ -23,7 +52,6 @@ function Tools() {
   return (
     <div className="tools-root">
 
-      {/* HEADER */}
       <header className="tools-header">
         <div className="breadcrumbs">
           Главная &nbsp;&nbsp; Инструменты
@@ -31,18 +59,12 @@ function Tools() {
 
         <div className="header-user">
           <span>{user.email}</span>
-          <button
-            onClick={() => {
-              localStorage.clear()
-              navigate("/login")
-            }}
-          >
+          <button onClick={() => { localStorage.clear(); navigate("/login") }}>
             Выход
           </button>
         </div>
       </header>
 
-      {/* FILTER BAR */}
       <section className="tools-filters">
         <input
           placeholder="Инструмент"
@@ -53,15 +75,13 @@ function Tools() {
         <button className="filter-btn">Категория</button>
         <button className="filter-btn">Статус</button>
         <button className="filter-search">Найти</button>
-        <button className="filter-add">Добавить инструмент</button>
+        <button className="filter-add" onClick={handleAddTool}>
+          Добавить инструмент
+        </button>
       </section>
 
-      {/* CONTENT */}
       <section className="tools-content">
-
-        {/* TABLE */}
         <div className="tools-table">
-
           <div className="table-head">
             <div>Название инструмента</div>
             <div>Категория</div>
@@ -73,9 +93,7 @@ function Tools() {
           {filtered.map(tool => (
             <div
               key={tool.id}
-              className={`table-row ${
-                selected?.id === tool.id ? "active" : ""
-              }`}
+              className={`table-row ${selected?.id === tool.id ? "active" : ""}`}
               onClick={() => setSelected(tool)}
             >
               <div>{tool.name}</div>
@@ -89,10 +107,7 @@ function Tools() {
           ))}
         </div>
 
-        {/* RIGHT COLUMN */}
         <div className="tool-right">
-
-          {/* RIGHT PANEL */}
           <div className="tool-panel">
             <h3>Управление записью</h3>
 
@@ -120,13 +135,13 @@ function Tools() {
             )}
           </div>
 
-          {/* ACTIONS — ЧЁТКО ПОД ПАНЕЛЬЮ */}
           <div className="tool-actions">
             <button disabled={!selected}>Редактировать</button>
-            <button disabled={!selected}>Удалить</button>
+            <button disabled={!selected} onClick={handleDeleteTool}>
+              Удалить
+            </button>
             <button disabled={!selected}>В ТО</button>
           </div>
-
         </div>
       </section>
     </div>

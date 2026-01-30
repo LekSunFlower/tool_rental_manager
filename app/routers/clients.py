@@ -1,9 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.database import SessionLocal
-from app.models import Client
-from app.models import Rental
-from app.models import Payment
+from app.models import Client, Rental, Payment
 
 router = APIRouter(
     prefix="/clients",
@@ -47,7 +45,7 @@ def add_client(
     Добавляет нового клиента в систему.
     """
     client = Client(
-        name=name,
+        full_name=name,
         phone=phone,
         email=email
     )
@@ -70,7 +68,7 @@ def update_client(
     if not client:
         raise HTTPException(status_code=404, detail="Клиент не найден")
 
-    client.name = name
+    client.full_name = name
     client.phone = phone
     client.email = email
 
@@ -90,6 +88,7 @@ def delete_client(client_id: int, db: Session = Depends(get_db)):
     db.commit()
     return {"message": "Клиент успешно удалён"}
 
+
 @router.get("/{client_id}/rentals")
 def client_rentals(client_id: int, db: Session = Depends(get_db)):
     client = db.query(Client).filter(Client.id == client_id).first()
@@ -102,6 +101,7 @@ def client_rentals(client_id: int, db: Session = Depends(get_db)):
         "client_id": client_id,
         "rentals": rentals
     }
+
 
 @router.get("/{client_id}/payments")
 def client_payments(client_id: int, db: Session = Depends(get_db)):

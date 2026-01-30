@@ -10,11 +10,40 @@ function Clients() {
   const [selected, setSelected] = useState(null)
   const [search, setSearch] = useState("")
 
+  const reloadClients = async () => {
+    const res = await fetch("http://127.0.0.1:8000/clients")
+    setClients(await res.json())
+  }
+
   useEffect(() => {
-    fetch("http://127.0.0.1:8000/clients")
-      .then(res => res.json())
-      .then(data => setClients(data))
+    reloadClients()
   }, [])
+
+  const handleDeleteClient = async () => {
+    if (!selected) return
+    if (!window.confirm("Удалить клиента?")) return
+
+    await fetch(`http://127.0.0.1:8000/clients/${selected.id}`, {
+      method: "DELETE"
+    })
+
+    setSelected(null)
+    reloadClients()
+  }
+
+  const handleAddClient = async () => {
+    const name = prompt("ФИО клиента")
+    const phone = prompt("Телефон")
+    const email = prompt("Email")
+    if (!name) return
+
+    await fetch(
+      `http://127.0.0.1:8000/clients?name=${name}&phone=${phone}&email=${email}`,
+      { method: "POST" }
+    )
+
+    reloadClients()
+  }
 
   const filtered = clients.filter(c =>
     c.full_name.toLowerCase().includes(search.toLowerCase())
@@ -23,24 +52,17 @@ function Clients() {
   return (
     <div className="clients-root">
 
-      {/* HEADER */}
       <header className="clients-header">
         <div className="breadcrumbs">Главная &nbsp;&nbsp; Клиенты</div>
 
         <div className="header-user">
           <span>{user.email}</span>
-          <button
-            onClick={() => {
-              localStorage.clear()
-              navigate("/login")
-            }}
-          >
+          <button onClick={() => { localStorage.clear(); navigate("/login") }}>
             Выход
           </button>
         </div>
       </header>
 
-      {/* FILTER BAR */}
       <section className="clients-filters">
         <input
           placeholder="ФИО"
@@ -53,13 +75,12 @@ function Clients() {
         <button className="filter-btn">Сортировка</button>
 
         <button className="filter-search">Найти</button>
-        <button className="filter-add">Добавить клиента</button>
+        <button className="filter-add" onClick={handleAddClient}>
+          Добавить клиента
+        </button>
       </section>
 
-      {/* CONTENT */}
       <section className="clients-content">
-
-        {/* TABLE */}
         <div className="clients-table">
           <div className="table-head clients-head">
             <div>ФИО / Организация</div>
@@ -80,54 +101,30 @@ function Clients() {
           ))}
         </div>
 
-        {/* RIGHT COLUMN */}
         <div className="client-right">
-
-          {/* PANEL */}
           <div className="client-panel">
             <h3>Управление записью</h3>
 
             {selected ? (
               <>
-                <div className="client-name">
-                  {selected.full_name}
-                </div>
-
+                <div className="client-name">{selected.full_name}</div>
                 <div className="client-phone">
                   Телефон {selected.phone}
                 </div>
-
-                <div className="client-status success">
-                  Арендует
-                </div>
-
-                <div className="rent-info">
-                  <div className="rent-count">
-                    Инструментов в аренде <strong>0</strong>
-                  </div>
-
-                  <div className="rent-list">
-                    <div>—</div>
-                  </div>
-
-                  <div className="rent-date">
-                    Возврат инструмента<br />
-                    —
-                  </div>
-                </div>
+                <div className="client-status success">Активен</div>
               </>
             ) : (
               <p className="client-empty">Выберите клиента</p>
             )}
           </div>
 
-          {/* ACTIONS */}
           <div className="client-actions">
             <button>Редактировать</button>
             <button>Завершить аренду</button>
-            <button>Удалить</button>
+            <button onClick={handleDeleteClient} disabled={!selected}>
+              Удалить
+            </button>
           </div>
-
         </div>
       </section>
     </div>
